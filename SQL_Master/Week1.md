@@ -74,7 +74,7 @@ FROM `1st_week.mst_users`
 ORDER BY user_id ASC;
 ```
 
-![이미지 설명](whatiddone/Dart_B_8th/SQL_Master/image/Week1/1.png)
+![img](../SQL_Master/image/Week1/1.png)
 
 ### 1-2 URL에서 요소 추출하기
 
@@ -84,9 +84,35 @@ ORDER BY user_id ASC;
 
 ```sql
 -- 레퍼러 도메인을 호스트 단위로 집계
-여기에 코드를 적어주세요.
+-- [REGEXP_EXTRACT 문법 및 역할]
+-- 1. 형식: REGEXP_EXTRACT(대상_컬럼, r'정규표현식_패턴')
+-- 2. 역할: 패턴 내에서 괄호 ( )로 묶은 그룹(Capture Group)에 해당하는 문자열만 추출
+-- 3. 일치하는 패턴이 없으면 NULL을 반환함
+SELECT
+    stamp,
+    
+    -- https:// 또는 http:// 뒤에 오는 첫 번째 슬래시(/) 전까지의 호스트명(도메인)만 괄호 ( )로 묶어 추출
+    REGEXP_EXTRACT(referrer, r'https?://([^/]+)') AS referrer_host
+FROM `1st_week.access_log`;
 ```
+### 🎯 REGEXP_EXTRACT vs NET.HOST 차이점 정리
 
+| 함수 | 기능 | 입력 개수 | 반환 값 | 사용 예시 | 지원 DB |
+| :--- | :--- | :---: | :--- | :--- | :--- |
+| **`REGEXP_EXTRACT(value, regex)`** | 정규표현식 패턴과 일치하는 괄호 `()` 그룹의 문자열을 추출 | 2개 | 일치하는 문자열 (없으면 `NULL`) | `REGEXP_EXTRACT('https://www.google.com/path', r'https?://([^/]+)')` → `'www.google.com'` | BigQuery |
+| **`NET.HOST(url)`** | URL 문자열에서 프로토콜, 경로, 쿼리 스트링을 제외한 호스트(도메인)만 파싱 추출 | 1개 | 추출된 호스트명 문자열 (파싱 실패 시 `NULL`) | `NET.HOST('https://www.google.com/path?k=v')` → `'www.google.com'` | BigQuery 전용 내장 함수 |
+
+---
+
+**상황별 권장 사용 기준**
+
+* **`NET.HOST`를 사용하는 경우 (강력 권장)**
+  * Referrer, 접속 URL 로그에서 **순수 도메인/호스트명**만 빠르고 간결하게 뽑아낼 때
+  * 포트 번호(`:8080`), 불완전한 URL 구조 등을 내장 파서가 자체 처리해주어 정규식보다 속도가 빠르고 에러 위험이 적음
+
+* **`REGEXP_EXTRACT`를 사용하는 경우**
+  * 호스트명 외에 특정 경로 세그먼트(`video/detail`), 쿼리 매개변수 값, 특정 텍스트 패턴 등 **규칙 기반의 유연한 문자열 분리가 필요할 때**
+  * 타 데이터베이스(PostgreSQL 등)의 정규식 쿼리를 BigQuery로 이식할 때
 ```sql
 -- URL 경로와 GET 매개변수에 있는 특정 키 추출
 ```
