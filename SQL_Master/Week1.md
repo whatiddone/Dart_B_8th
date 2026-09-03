@@ -66,14 +66,15 @@
 SELECT
     user_id,
     CASE
-        WHEN register_device=1 THEN '데스크톱'
-        WHEN register_device=2 THEN '스마트폰'
-        WHEN register_device=3 THEN '애플리케이션'
+        WHEN register_device = 1 THEN '데스크톱'
+        WHEN register_device = 2 THEN '스마트폰'
+        WHEN register_device = 3 THEN '애플리케이션'
         END AS device_name
-FROM mst_users
+FROM `1st_week.mst_users`
+ORDER BY user_id ASC;
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+![이미지 설명](whatiddone/Dart_B_8th/SQL_Master/image/Week1/1.png)
 
 ### 1-2 URL에서 요소 추출하기
 
