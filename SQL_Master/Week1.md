@@ -84,39 +84,79 @@ ORDER BY user_id ASC;
 
 ```sql
 -- 레퍼러 도메인을 호스트 단위로 집계
--- [REGEXP_EXTRACT 문법 및 역할]
--- 1. 형식: REGEXP_EXTRACT(대상_컬럼, r'정규표현식_패턴')
--- 2. 역할: 패턴 내에서 괄호 ( )로 묶은 그룹(Capture Group)에 해당하는 문자열만 추출
--- 3. 일치하는 패턴이 없으면 NULL을 반환함
+-- 1. REGEXP_EXTRACT 사용
 SELECT
     stamp,
     
     -- https:// 또는 http:// 뒤에 오는 첫 번째 슬래시(/) 전까지의 호스트명(도메인)만 괄호 ( )로 묶어 추출
     REGEXP_EXTRACT(referrer, r'https?://([^/]+)') AS referrer_host
 FROM `1st_week.access_log`;
+-- 2. NET.HOST 사용(Bigquery)
+SELECT
+    stamp,
+    -- URL에서 호스트(도메인) 부분 추출
+    NET.HOST(referrer) AS referrer_host
+FROM `1st_week.access_log`;
 ```
-### 🎯 REGEXP_EXTRACT vs NET.HOST 차이점 정리
-
-| 함수 | 기능 | 입력 개수 | 반환 값 | 사용 예시 | 지원 DB |
-| :--- | :--- | :---: | :--- | :--- | :--- |
-| **`REGEXP_EXTRACT(value, regex)`** | 정규표현식 패턴과 일치하는 괄호 `()` 그룹의 문자열을 추출 | 2개 | 일치하는 문자열 (없으면 `NULL`) | `REGEXP_EXTRACT('https://www.google.com/path', r'https?://([^/]+)')` → `'www.google.com'` | BigQuery |
-| **`NET.HOST(url)`** | URL 문자열에서 프로토콜, 경로, 쿼리 스트링을 제외한 호스트(도메인)만 파싱 추출 | 1개 | 추출된 호스트명 문자열 (파싱 실패 시 `NULL`) | `NET.HOST('https://www.google.com/path?k=v')` → `'www.google.com'` | BigQuery 전용 내장 함수 |
-
----
-
-**상황별 권장 사용 기준**
-
-* **`NET.HOST`를 사용하는 경우 (강력 권장)**
+```
+r'https?://([^/]+)'
+│ └──┬─┘ │ └──┬──┘
+│    │   │    └─ ③ 괄호 안: 슬래시(/)가 아닌 글자들을 1개 이상 묶어서 '추출'
+│    │   └────── ② 문자 그대로 콜론과 슬래시 두 개 (://)
+│    └────────── ① http 또는 https 로 시작
+└─────────────── (참고: 문자열 앞 'r'은 백슬래시를 있는 그대로 쓰겠다는 의미)
+```
+- REGEXP_EXTRACT 함수란?
+```
+1. 형식: REGEXP_EXTRACT(대상_컬럼, r'정규표현식_패턴')
+2. 역할: 패턴 내에서 괄호 ( )로 묶은 그룹(Capture Group)에 해당하는 문자열만 추출
+3. 일치하는 패턴이 없으면 NULL을 반환함
+```
+- **상황별 권장 사용 기준**
+```
+'NET.HOST'를 사용하는 경우
   * Referrer, 접속 URL 로그에서 **순수 도메인/호스트명**만 빠르고 간결하게 뽑아낼 때
   * 포트 번호(`:8080`), 불완전한 URL 구조 등을 내장 파서가 자체 처리해주어 정규식보다 속도가 빠르고 에러 위험이 적음
 
-* **`REGEXP_EXTRACT`를 사용하는 경우**
-  * 호스트명 외에 특정 경로 세그먼트(`video/detail`), 쿼리 매개변수 값, 특정 텍스트 패턴 등 **규칙 기반의 유연한 문자열 분리가 필요할 때**
+'REGEXP_EXTRACT'를 사용하는 경우
+  * 호스트명 외에 특정 경로 세그먼트(`video/detail`), 쿼리 매개변수 값, 특정 텍스트 패턴 등 '규칙 기반의 유연한 문자열 분리가 필요할 때'
   * 타 데이터베이스(PostgreSQL 등)의 정규식 쿼리를 BigQuery로 이식할 때
-```sql
--- URL 경로와 GET 매개변수에 있는 특정 키 추출
 ```
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+```sql
+-- URL 경로와 GET 매개변수에 있는 특정 키 
+-- 1. REGEXP_EXTRACT 사용
+SELECT
+    stamp,
+    url,
+    -- 1. URL 경로(Path) 추출 (도메인 뒤부터 ? 또는 # 전까지)
+    REGEXP_EXTRACT(url, r'//[^/]+([^?#]+)') AS path,
+
+    -- 2. GET 쿼리 매개변수 중 id의 값 추출
+    REGEXP_EXTRACT(url, r'id=([^&]*)') AS id
+FROM `1st_week.access_log`;
+
+-- 2. NET 계열 함수 활용
+SELECT
+    stamp,
+    url,
+    
+    -- 1. 호스트명(도메인) 추출
+    NET.HOST(url) AS host,
+
+    -- 2. URL 경로(Path) 추출
+    -- 도메인(NET.HOST) 뒤에 붙은 문자열 중 '?' 앞부분까지 잘라내기
+    REGEXP_EXTRACT(url, CONCAT('https?://', NET.HOST(url), '([^?#]*)')) AS path,
+
+    -- 3. GET 매개변수 id 값 추출
+    REGEXP_EXTRACT(url, r'[?&]id=([^&#]+)') AS id
+FROM `1st_week.access_log`; 
+```
+<p align="center">
+  <img src="image/Week1/2.png" height="200" alt="2">
+  <img src="image/Week1/3.png" height="200" alt="3">
+  <img src="image/Week1/4.png" height="200" alt="4">
+  <img src="image/Week1/5.png" height="200" alt="5">
+</p>
 
 ### 1-3 문자열을 배열로 분해하기
 
