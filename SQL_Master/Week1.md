@@ -337,44 +337,177 @@ datetime은 특정 시간대와 무관하게 고정된 시간 정보를 저장�
 
 ```sql
 -- 구매액에서 할인 쿠폰 값을 제외한 매출 금액을 구하는 쿼리
+SELECT
+  purchase_id,
+  amount,
+  coupon,
+  amount - coupon AS discount_amount1,
+  amount - COALESCE(coupon, 0) AS discount_amount2
+FROM `1st_week.purchase_log_with_coupon`
+ORDER BY purchase_id ASC
+;
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+![img](../SQL_Master/image/Week1/10.png)
+
+- COALESCE 함수란?
+```
+1. 형식: COALESCE(값1, 값2, 값3, ...)
+2. 역할: 나열된 인자들을 왼쪽부터 순서대로 확인하여, '처음으로 NULL이 아닌 값'을 찾아 반환함
+3. 모든 인자가 NULL이면 NULL을 반환함 (주로 NULL 값을 0이나 기본값으로 대체할 때 필수 사용)
+```
 
 
 ## 2. 여러 개의 값에 대한 조작 
 
 ### 2-1 문자열을 연결하기
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+앞에서 REGEXP_EXTRACT 함수로 특정 값을 추출했다면 CONCAT 함수로는 단일 값으로 반환
 
-```sql
-여기에 코드를 적어주세요.
+```SQL![alt text](image.png)
+SELECT
+  user_id,
+  CONCAT(pref_name, city_name) AS pref_city  -- CONCAT을 사용해 도/시(pref_name)와 시/군/구(city_name) 문자열을 연결
+FROM `1st_week.mst_user_location`
+ORDER BY user_id ASC;
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+![img](../SQL_Master/image/Week1/11.png)
 
 ### 2-2 여러 개의 값을 비교하기
+#### 2-2-1 분기별 매출 증감 판정하기
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+**CASE 함수**를 이용하여 조건을 기술하고 조건에 맞는 값을 지정하거나, **SIGN 함수**를 이용하여 간단하게 증감 판정.
 
-```sql
-여기에 코드를 적어주세요.
+- SIGN 함수란?
+```
+1. 형식: SIGN(계산식)
+2. 역할: 숫자의 부호(양수, 0, 음수)를 판별하여 각각 1, 0, -1 중 하나를 반환함
+3. 입력값이 양수면 1, 0이면 0, 음수면 -1을 반환하며, NULL이면 NULL을 반환함
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+```SQL
+SELECT
+  year,
+  q1,
+  q2,
+  CASE
+    WHEN q1 < q2 THEN '+'
+    WHEN q1 = q2 THEN ' '
+    ELSE '-'
+  END AS judge_q1_q2,  -- 1) CASE 문으로 Q1과 Q2의 매출 증감 여부를 기호(+, ' ', -)로 평가
+  q2 - q1 AS diff_q2_q1, -- 2) Q2와 Q1의 매출 차이 계산
+  SIGN(q2 - q1) AS sign_q2_q1 -- 3) SIGN 함수로 부호 판별 (증가: 1, 유지: 0, 감소: -1)
+FROM `1st_week.quarterly_sales`
+ORDER BY year;
+```
+![img](../SQL_Master/image/Week1/12.png)
+
+#### 2-2-2 연간 최대/최소 4분기 매출 맞기
+
+컬럼 값에서 최댓값 또는 최솟값을 찾을 때는 **GREATEST 함수** 또는 **LEAST 함수**를 사용
+
+- GREATEST/LEAST 함수란?
+```
+1. 형식: GREATEST(LEAST)(값1, 값2, 값3, ...)
+2. 역할: 나열된 여러 인자(컬럼 또는 값) 중 '최댓값(최솟값)'을 반환함
+3. 인자 중 하나라도 NULL이 포함되어 있으면 NULL을 반환함
+```
+
+```SQL
+SELECT
+  year,
+  -- NULL을 0으로 치환하여 존재하는 분기 중 최대 매출 계산
+  GREATEST(
+    COALESCE(q1, 0),
+    COALESCE(q2, 0),
+    COALESCE(q3, 0),
+    COALESCE(q4, 0)
+  ) AS greatest_sales,
+
+  -- 최솟값은 0으로 치환 시 왜곡되므로 유효한 값만 골라내거나 기본 LEAST 적용
+  LEAST(
+    COALESCE(q1, 999999999),
+    COALESCE(q2, 999999999),
+    COALESCE(q3, 999999999),
+    COALESCE(q4, 999999999)
+  ) AS least_sales
+FROM `1st_week.quarterly_sales`
+ORDER BY year;
+```
+
+![img](../SQL_Master/image/Week1/13.png)
+
+``` SQL
+--보충: CONCAT 함수 활용하여 매출액(분기)' 형태 문자열 생성
+SELECT
+  year,
+  -- 1) 순수 최댓값 숫자 구하기
+  GREATEST(COALESCE(q1, 0), COALESCE(q2, 0), COALESCE(q3, 0), COALESCE(q4, 0)) AS greatest_sales,
+
+  -- 2) CONCAT으로 '매출액(분기)' 형태 문자열 만들기
+  CONCAT(
+    CAST(GREATEST(COALESCE(q1, 0), COALESCE(q2, 0), COALESCE(q3, 0), COALESCE(q4, 0)) AS STRING),
+    CASE GREATEST(COALESCE(q1, 0), COALESCE(q2, 0), COALESCE(q3, 0), COALESCE(q4, 0))
+      WHEN q1 THEN '(Q1)'
+      WHEN q2 THEN '(Q2)'
+      WHEN q3 THEN '(Q3)'
+      WHEN q4 THEN '(Q4)'
+    END
+  ) AS max_sales_with_quarter
+FROM `1st_week.quarterly_sales`
+ORDER BY year;
+```
+#### 2-2-3 연간 평균 4분기 매출 
+```SQL
+-- 단순 연산
+SELECT
+  year,
+  (q1 + q2 + q3 + q4) / 4 AS average
+FROM `1st_week.quarterly_sales`
+ORDER BY year;
+```
+![img](../SQL_Master/image/Week1/14-1.png)<br>
+⚠️ NULL 값이 있으므로 사칙연산이 제대로 작동하지 않음
+```SQL
+-- COALESCE를 사용해 NULL을 0으로변환
+SELECT
+  year,
+  (COALESCE(q1, 0) + COALESCE(q2, 0) + COALESCE(q3, 0) + COALESCE(q4, 0)) / 4 AS average
+FROM `1st_week.quarterly_sales`
+ORDER BY year;
+```
+
+![img](../SQL_Master/image/Week1/14-2.png)<br>
+⚠️ 분자가 0이므로 2017년의 평균이 낮아짐
+```SQL
+-- NULL이 아닌 컬럼만을 사용
+SELECT
+  year,
+  (COALESCE(q1, 0) + COALESCE(q2, 0) + COALESCE(q3, 0) + COALESCE(q4, 0))
+  / (
+      SIGN(COALESCE(q1, 0)) + SIGN(COALESCE(q2, 0))
+    + SIGN(COALESCE(q3, 0)) + SIGN(COALESCE(q4, 0)) -- NULL이 아닌 유효한 분기 개수의 합으로 나누기
+  ) AS average
+FROM `1st_week.quarterly_sales`
+ORDER BY year;
+```
+![img](../SQL_Master/image/Week1/14-3.png)
+```SQL
+```
 
 ### 2-3 2개의 값 비율 계산하기
-
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+#### 2-3-1 정수 자료형의 데이터 나누기
 
 ```sql
 여기에 코드를 적어주세요.
 ```
-
+#### 2-3-2 0으로 나누는 것 피하기
 <!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
 
 ### 2-4 두 값의 거리 계산하기
+#### 2-4-1 숫자 데이터의 절댓값, 제곱 평균 제곱근(RMS) 계산하기
+#### xy 평면 위에 있는 두 점의 유클리드 거리 계산하기
 
 <!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
 
