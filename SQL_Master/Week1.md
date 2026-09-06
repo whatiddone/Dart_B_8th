@@ -1134,40 +1134,130 @@ FROM
 ```
 ![img](../SQL_Master/image/Week1/31.png)
 ## 04. 여러 개의 테이블 조작하기
-
+- 업무 데이터를 사용하는 경우   
+업무 데이터는 여러 테이블로 나뉘어 관리하는 경우가 많음
+- 로그 데이터를 사용하는 경우   
+거대한 로그 파일이 하나의 테이블에 저장된 경우에도, 여러 처리를 실행하려면 여러 개의 SELECT 구문을 조합하거나, 자기 결합해서 레코드들을 비교하는 경우도 존재
 ### 4-1 여러 개의 테이블을 세로로 결합하기
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+비슷한 구조를 가지는 테이블의 데이터를 일괄 처리하고 싶은경우, UNION ALL 구문을 사용.
 
 ```sql
-여기에 코드를 적어주세요.
-```
+-- UNION ALL 구문을 사용해 테이블을 세로로 결합하는 쿼리
+SELECT
+  'app1' AS app_name, 
+  user_id,
+  name,
+  email -- app2에는 phone 컬럼이 없으므로 제외
+FROM `1st_week.app1_mst_users`
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+UNION ALL
+
+SELECT
+  'app2' AS app_name,
+  user_id,
+  name,
+  NULL AS email       -- app2에는 email 컬럼이 없으므로 NULL로 설정
+FROM `1st_week.app2_mst_users`;
+```
+![img](../SQL_Master/image/Week1/32.png)
 
 ### 4-2 여러 개의 테이블을 가로로 정렬하기
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+JOIN을 사용하여 여러 개의 테이블을 가로 정렬   
+⚠️ 마스터 테이블에 JOIN을 사용하여 결헙하지 못한 데이터가 사라지거나, 중복된 데이터가 발생하는 경우 주의
 
 ```sql
-여기에 코드를 적어주세요.
+-- 여러 개의 테이블을 결합하여 가로로 정렬하는 쿼리
+SELECT
+  m.category_id,
+  m.name,
+  s.sales,          
+  r.product_id AS sale_product
+FROM `1st_week.mst_categories` AS m
+  JOIN 
+    `1st_week.category_sales` AS s
+    ON m.category_id = s.category_id      -- 카테고리별 매출액 결합 (일치하는 category_id 기준)
+  JOIN 
+    `1st_week.product_sale_ranking` AS r
+    ON m.category_id = r.category_id      -- 카테고리별 상품 순위 결합 (일치하는 category_id 기준)
+ORDER BY m.category_id, r.rank;
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
-
-### 4-3 조건 플래그를 0과 1로 표현하기
-
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+![img](../SQL_Master/image/Week1/33.png)
+`↑ 마스터 테이블의 행 수 변경(3 → 6) 발생`
 
 ```sql
-여기에 코드를 적어주세요.
+-- 마스터 테이블의 행 수를 변경하지 않고 여러 개의 테이블을 가로로 정렬하는 쿼리
+SELECT
+  m.category_id, 
+  m.name,
+  s.sales,
+  r.product_id AS top_sale_product
+FROM `1st_week.mst_categories` AS m
+  LEFT JOIN `1st_week.category_sales` AS s
+    ON m.category_id = s.category_id
+  LEFT JOIN `1st_week.product_sale_ranking` AS r
+    ON m.category_id = r.category_id
+  AND r.rank = 1 -- 각 카테고리의 1위 상품만 추출
+ORDER BY m.category_id;
+```
+![img](../SQL_Master/image/Week1/34.png)
+- SQL JOIN 쿼리 작성하는 흐름
+  1. 테이블 확인: 테이블에 저장된 데이터, 컬럼 확인
+  2. 기준 테이블 정의: 가장 많이 참고할 기준(base) 테이블 정의
+  3. JOIN Key 찾기: 여러 테이블과 연결할 Key(ON) 정리
+  4. 결과 예상하기: 결과 테이블을 예상해서 손, 엑셀로 작성
+  5. 쿼리 작성/검증: 예상한 결과와 동일한 결과가 나오는지 확인
+
+![img](../SQL_Master/image/Week1/join.png)
+
+상관 서브쿼리의 경우 내부에서 ORDER BY구문과 LIMIT 구문을 사용하여 데이터 압축 가능
+
+- 상관 서브쿼리와 스칼라 서브쿼리란?
+```
+스칼라 서브쿼리 (Scalar Subquery)
+   - 단 하나의 값(1행 1열)만 반환하는 서브쿼리.
+   - `SELECT`, `WHERE`, `ORDER BY` 절 등 단일 값이 필요한 위치에 컬럼처럼 사용할 수 있음.
+상관 서브쿼리 (Correlated Subquery)
+  - 서브쿼리 내부에서 외부 메인 쿼리의 컬럼을 참조(`WHERE s.id = m.id`)하는 형태.
+  - 외부 쿼리의 각 행(Row)을 읽을 때마다 서브쿼리가 종속적으로 반복 실행되는 구조.
+스칼라 상관 서브쿼리
+  - `SELECT` 절 안에서 외부 테이블의 식별자 값을 참조하여, 행마다 딱 1개의 스칼라 값을 뽑아내는 서브쿼리.
+```
+`한줄 요약`
+- 스칼라 서브쿼리: 반환되는 데이터의 규격이 "1행 1열(스칼라)"인가?
+
+- 상관 서브쿼리: 서브쿼리가 "외부 쿼리의 컬럼을 가져다 쓰고 있는가"?
+
+### 4-3 조건 플래그를 0과 1로 표현하기:SIGN 함수 이용
+
+SIGN 함수란?
+```
+1. 형식: SIGN(숫자_컬럼_또는_표현식)
+2. 역할: 수치 데이터의 '부호를 판정'하여 양수는 1, 0은 0, 음수는 -1로 단순화된 정수를 반환함
+3. 대상 값이 NULL이면 NULL을 반환함
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+```sql
+-- 신용 카드 등록과 구매 이력 유무를 0과 1이라는 플래그로 나타내는 쿼리
+SELECT
+  m.user_id,
+  m.card_number,
+  COUNT(p.user_id) AS purchase_count,                                    -- 총 구매 횟수 집계
+  CASE WHEN m.card_number IS NOT NULL THEN 1 ELSE 0 END AS has_card,      -- 신용카드 번호 등록 여부 플래그 (등록: 1, 미등록: 0):CASE 함수 이용
+  SIGN(COUNT(p.user_id)) AS has_purchased                                -- 구매 이력 유무 플래그 (1회 이상: 1, 0회: 0): SIGN 함수 이용
+FROM `1st_week.mst_users_with_card_number` AS m
+LEFT JOIN `1st_week.purchase_log` AS p
+  ON m.user_id = p.user_id
+GROUP BY m.user_id, m.card_number
+ORDER BY m.user_id;
+```
+![img](../SQL_Master/image/Week1/35.png)
 
 ### 4-4 계산한 테이블에 이름 붙여 재사용하기
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+CTE를 사용하여 코드의 가독성을 높일 수 있다.
 
 ```sql
 여기에 코드를 적어주세요.
