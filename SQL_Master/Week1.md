@@ -1257,24 +1257,154 @@ ORDER BY m.user_id;
 
 ### 4-4 계산한 테이블에 이름 붙여 재사용하기
 
-CTE를 사용하여 코드의 가독성을 높일 수 있다.
+CTE를 사용하여 코드의 가독성을 높일 수 있다.<br>
 
 ```sql
-여기에 코드를 적어주세요.
+-- 카테고리별 순위를 윈도 함수로 계산하고, JOIN을 사용해 같은 순위의 상품을 가로로 나타내는 쿼리
+WITH product_sale_ranking AS ( -- CTE
+  SELECT
+    category_name,
+    product_id,
+    sales,
+    ROW_NUMBER() OVER(PARTITION BY category_name ORDER BY sales DESC) AS rank -- 카테고리별 매출 기준 내림차순 순위 매기기
+  FROM `1st_week.product_sales`
+)
+SELECT *
+FROM product_sale_ranking
+ORDER BY category_name, rank;
 ```
+![img](../SQL_Master/image/Week1/36.png)
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+```sql
+WITH product_sale_ranking AS ( -- 첫 번쨰 CTE
+  SELECT
+    category_name,
+    product_id,
+    sales,
+    ROW_NUMBER() OVER(PARTITION BY category_name ORDER BY sales DESC) AS rank
+  FROM `1st_week.product_sales`
+),
+mst_rank AS ( -- 두 번쨰 CTE(WITH 키워드는 최초 한 번만 작성하고, 이후 추가되는 CTE는 쉼표(,)로 이어서 정의)
+  SELECT DISTINCT rank -- 모든 카테고리에 걸쳐 나타난 고유한 순위 번호 목록 추출 (1, 2, 3, 4 등)
+  FROM product_sale_ranking
+)
+SELECT *
+FROM mst_rank
+ORDER BY rank;
+```
+![img](../SQL_Master/image/Week1/37.png)
+
+```sql
+WITH product_sale_ranking AS ( -- CTE 1
+  SELECT
+    category_name,
+    product_id,
+    sales,
+    ROW_NUMBER() OVER(PARTITION BY category_name ORDER BY sales DESC) AS rank
+  FROM `1st_week.product_sales`
+),
+mst_rank AS ( -- CTE 2
+  SELECT DISTINCT rank
+  FROM product_sale_ranking
+)
+SELECT
+  m.rank,
+  r1.product_id AS dvd, 
+  r1.sales      AS dvd_sales,
+  r2.product_id AS cd, 
+  r2.sales      AS cd_sales,
+  r3.product_id AS book,
+  r3.sales      AS book_sales
+FROM mst_rank AS m 
+LEFT JOIN product_sale_ranking AS r1 -- 순위 + DVD 카테고리 상품만 결합
+  ON m.rank = r1.rank
+  AND r1.category_name = 'dvd'
+LEFT JOIN product_sale_ranking AS r2 -- 순위 + CD 카테고리 상품만 결합
+  ON m.rank = r2.rank
+  AND r2.category_name = 'cd'
+LEFT JOIN product_sale_ranking AS r3 -- 순위 + Book 카테고리 상품만 결합
+  ON m.rank = r3.rank
+  AND r3.category_name = 'book'
+ORDER BY m.rank;
+```
+![img](../SQL_Master/image/Week1/38.png)
 
 ### 4-5 유사 테이블 만들기
-
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+#### 4-5-1 임의의 레코드를 가진 유사 테이블 만들기
+코드 값과 레이블 조합을 유사 테이블로 만들고 집계
+```sql
+-- 디바이스 ID와 이름의 마스터 테이블을 만드는 쿼리
+WITH mst_devices AS (
+  -- SELECT 구문으로 유사 테이블 생성& UNION ALL로 결합
+            SELECT 1 AS device_id, 'PC' AS device_name 
+  UNION ALL SELECT 2 AS device_id, 'SP' AS device_name
+  UNION ALL SELECT 3 AS device_id, '애플리케이션' AS device_name 
+)
+SELECT
+  device_id,
+  device_name
+FROM mst_devices
+ORDER BY device_id; 
+```
+![img](../SQL_Master/image/Week1/39.png)
+```sql
+-- 의사 테이블을 사용해 코드를 레이블로 변환하는 쿼리
+WITH mst_devices AS (
+            SELECT 1 AS device_id, 'PC' AS device_name 
+  UNION ALL SELECT 2 AS device_id, 'SP' AS device_name
+  UNION ALL SELECT 3 AS device_id, '애플리케이션' AS device_name 
+)
+SELECT
+  u.user_id,
+  d.device_name
+FROM `1st_week.mst_users` AS u
+LEFT JOIN mst_devices AS d
+  ON u.register_device = d.device_id -- CTE를 마스터데이터와 결합
+ORDER BY u.user_id;
+```
+![img](../SQL_Master/image/Week1/40.png)
 
 ```sql
-여기에 코드를 적어주세요.
+-- UNNEST 함수 사용: 배열(ARRAY) 안에 담긴 요소들을 풀어서 개별 행(Row)으로 전개
+WITH mst_devices AS (
+  -- 구조체(STRUCT) 배열을 UNNEST하여 가상 테이블 생성
+  SELECT *
+  FROM UNNEST([
+    STRUCT(1 AS device_id, 'PC' AS device_name),
+    STRUCT(2 AS device_id, 'SP' AS device_name),
+    STRUCT(3 AS device_id, '애플리케이션' AS device_name)
+  ])
+)
+SELECT
+  u.user_id,
+  d.device_name
+FROM `1st_week.mst_users` AS u
+LEFT JOIN mst_devices AS d
+  ON u.register_device = d.device_id -- CTE를 마스터데이터와 결합
+ORDER BY u.user_id;
 ```
+!![img](../SQL_Master/image/Week1/41.png)
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+#### 4-5-2 순번을 사용해 테이블 작성하기
+순번을 자동 생성하여 임이의 레코드 수를 가진 CTE를 간편하게 생성
+```sql
+-- 순번을 가진 유사 테이블을 작성하는 쿼리
+WITH series AS (
+  -- 1부터 5까지의 순번 배열 생성 후 UNNEST로 개별 행 전개
+  SELECT idx
+  FROM UNNEST(GENERATE_ARRAY(1, 5)) AS idx
+)
+SELECT *
+FROM series
+ORDER BY idx;
+```
+!![img](../SQL_Master/image/Week1/41.png)
 
-
-
+- GENERATE_SERIES 함수란?
+```
+1. 형식: GENERATE_SERIES(시작값, 종료값 [, 증감값])
+2. 역할: 지정한 시작값부터 종료값까지 일정 간격(기본 1)으로 증가 또는 감소하는 일련의 연속된 수치나 날짜/시간 행(Row) 집합을 생성함
+3. PostgreSQL 등에서 순번 생성, 빈 날짜 채우기(캘린더 생성), 가상 마스터 테이블 제작 시 주로 사용됨
+4. BigQuery 지원 여부: 직접 지원하지 않으며, GENERATE_ARRAY(시작, 종료 [, 증감])로 배열을 생성한 뒤 UNNEST()로 풀어 행으로 변환해야 함
+```
 ### 🎉 수고하셨습니다.
