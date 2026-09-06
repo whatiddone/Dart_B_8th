@@ -1090,7 +1090,49 @@ ORDER BY q.year, p.idx;
 
 #### 3-4-2 임의의 길이를 가진 배열을 행으로 전개하기
 
+- 테이블 함수 이용
+  - 리턴값이 테이블인 함수
+  - BigQuery에는 unnest 함수가 있음
 
+- UNNEST 함수란?
+```
+1. 형식: UNNEST(배열_표현식)
+2. 역할: 배열(ARRAY) 안에 담긴 요소들을 풀어서 개별 행(Row)으로 전개(언피벗)함
+3. 주로 FROM 또는 JOIN 절에서 테이블처럼 참조하여 사용함
+```
+```sql
+-- 테이블 함수를 사용해 배열을 행으로 전개하는 쿼리
+SELECT
+  product_id
+FROM
+  UNNEST(ARRAY['A001', 'A002', 'A003']) AS product_id; -- BigQuery에서 UNNEST 함수는 FROM 구문 내부에서 테이블 함수로 사용: 스칼라 값과 테이블을 동시에 다룰 수 없기 때문
+```
+
+![img](../SQL_Master/image/Week1/30.png)
+
+```sql
+-- 테이블 함수를 사용해 쉼표로 구분된 문자열 데이터를 행으로 전개하는 쿼리 1
+SELECT
+  p.purchase_id,
+  product_id -- SPLIT으로 쪼개고 UNNEST로 전개한 개별 상품 ID
+FROM
+  `1st_week.purchase_detail_log` AS p -- 원래 테이블
+  CROSS JOIN
+  UNNEST(SPLIT(p.product_id, ',')) AS product_id -- 쉼표로 쪼갠 배열을 테이블 행으로 교차 결합(전개)
+ORDER BY purchase_id;
+```
+```sql
+-- 테이블 함수를 사용해 쉼표로 구분된 문자열 데이터를 행으로 전개하는 쿼리 2(1과 기능 동일)
+SELECT
+  p.purchase_id,
+  product_id
+FROM
+  `1st_week.purchase_detail_log` AS p,
+  -- 1) SPLIT: 쉼표(',')로 구분된 문자열(product_ids)을 배열(ARRAY)로 분해
+  -- 2) UNNEST: 배열 요소를 테이블 행으로 전개 (콤마(,)는 CROSS JOIN과 동일하게 동작)
+  UNNEST(SPLIT(p.product_ids, ',')) AS product_id;
+```
+![img](../SQL_Master/image/Week1/31.png)
 ## 04. 여러 개의 테이블 조작하기
 
 ### 4-1 여러 개의 테이블을 세로로 결합하기
