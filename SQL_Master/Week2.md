@@ -174,30 +174,149 @@ FROM `2nd_week.purchase_log`
 작대비: yoy(전년 동기 대비 증감률)
 
 ```sql
-여기에 코드를 적어주세요.
+WITH daily_purchase AS (        -- 일별 매출 집계 및 날짜(연, 월, 일) 요소 분해
+  SELECT
+    dt,
+    FORMAT_DATE('%Y', PARSE_DATE('%Y-%m-%d', dt)) AS year,
+    FORMAT_DATE('%m', PARSE_DATE('%Y-%m-%d', dt)) AS month, 
+    FORMAT_DATE('%d', PARSE_DATE('%Y-%m-%d', dt)) AS date,
+    SUM(purchase_amount)                          AS purchase_amount,
+    COUNT(order_id)                               AS orders
+  FROM `2nd_week.purchase_log`
+  GROUP BY dt
+)
+
+-- 2. 월별 피벗 집계 및 전년 대비 성장률(%) 계산
+SELECT
+  month,
+  SUM(CASE year WHEN '2014' THEN purchase_amount END) AS amount_2014,
+  SUM(CASE year WHEN '2015' THEN purchase_amount END) AS amount_2015,
+  100.0 * SUM(CASE year WHEN '2015' THEN purchase_amount END) / SUM(CASE year WHEN '2014' THEN purchase_amount END) AS rate  -- 2014년 대비 2015년 성장률/달성률 (100.0 * 2015년 매출 / 2014년 매출)
+
+FROM daily_purchase
+GROUP BY month 
+ORDER BY month; 
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+![img](../SQL_Master/image/Week2/9-6.png)
  
 ### 1-5 Z 차트로 업적의 추이 확인하기
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+Z 차트는 '월차매출', '매출누계', '이동년계' 라는 3개의 지표로 구성되어 있어, 계절 변동의 영향을 배제하고 트렌드를 분석
+- 월차매출
+  - 매출 합계를 월별로 집계
+  - 아래로 볼록하면 매출 성장, 위로 볼록하면 매출 감소
+- 매출누계
+  - 해당 월의 매출에 이전월까지의 매출 누계를 합한 값
+  - 기울기 양수면 매출 성장, 기울기 음수면 매출 감소
+- 이동년계
+  - 해당 월의 매출에 과거 11개월의 매출을 합한 값
 
+구매 로그를 기반으로 월별 매출 집계 → 각 월의 매출에 대해 누계매출과 이동년계 계산 
 ```sql
-여기에 코드를 적어주세요.
+WITH
+daily_purchase AS (                  -- 1. 일별 매출 집계 및 날짜 요소(연, 월) 분해
+  SELECT
+    dt,
+    FORMAT_DATE('%Y', PARSE_DATE('%Y-%m-%d', dt)) AS year,
+    FORMAT_DATE('%m', PARSE_DATE('%Y-%m-%d', dt)) AS month, 
+    SUM(purchase_amount) AS purchase_amount 
+  FROM `2nd_week.purchase_log`
+  GROUP BY dt
+),
+monthly_amount AS (                  -- 2. 월별 매출 집계
+  SELECT
+    year,
+    month, 
+    SUM(purchase_amount) AS amount
+  FROM daily_purchase
+  GROUP BY year, month
+),
+calc_index AS (                      -- 3. 누계 매출 및 1년 치 이동년계 계산
+  SELECT
+    year,
+    month,
+    amount,
+    SUM(CASE WHEN year = '2015' THEN amount END) OVER(    -- 2015년 1월부터의 누계 매출 집계
+      ORDER BY year, month
+      ROWS UNBOUNDED PRECEDING
+    ) AS agg_amount,
+    SUM(amount) OVER(                                     -- 당월부터 직전 11개월까지(총 12개월간)의 매출 합계(이동년계)
+      ORDER BY year, month
+      ROWS BETWEEN 11 PRECEDING AND CURRENT ROW          
+    ) AS year_avg_amount
+
+  FROM monthly_amount
+)
+SELECT                               -- 4. 2015년 데이터만 필터링하여 출력
+  CONCAT(year, '-', month) AS year_month, 
+  amount,
+  agg_amount,
+  year_avg_amount
+FROM calc_index
+WHERE
+  year = '2015'
+ORDER BY
+  year_month;
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
- 
+![img](../SQL_Master/image/Week2/9-7.png)
 ### 1-6 매출을 파악할 때 중요 포인트 
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+매출이라는 결과의 원인이라 할 수 있는 구매 횟수, 구매 단가 등의 주변 데이터를 고려해야 함
 
 ```sql
-여기에 코드를 적어주세요.
+WITH
+-- 1. 일별 구매 집계 및 날짜 분해
+daily_purchase AS (
+  SELECT
+    dt,
+    FORMAT_DATE('%Y', PARSE_DATE('%Y-%m-%d', dt)) AS year,
+    FORMAT_DATE('%m', PARSE_DATE('%Y-%m-%d', dt)) AS month, 
+    FORMAT_DATE('%d', PARSE_DATE('%Y-%m-%d', dt)) AS date,
+    SUM(purchase_amount) AS purchase_amount,
+    COUNT(order_id)      AS orders
+  FROM `2nd_week.purchase_log`
+  GROUP BY dt
+),
+
+-- 2. 월별 구매 집계 (주문 수, 평균 구매액, 월간 총매출)
+monthly_purchase AS (
+  SELECT
+    year,
+    month,
+    SUM(orders)          AS orders,
+    AVG(purchase_amount) AS avg_amount,
+    SUM(purchase_amount) AS monthly
+  FROM daily_purchase
+  GROUP BY year, month
+)
+
+-- 3. 연월 표기, 당해 누적 매출, 12개월 전(전년 동월) 대비 성장률 산출
+SELECT
+  CONCAT(year, '-', month) AS year_month,
+  orders, 
+  avg_amount,
+  monthly,
+  SUM(monthly) OVER(        -- 당해 연도 누적 매출액 (연도가 바뀌면 다시 1월부터 누적 합산)
+    PARTITION BY year
+    ORDER BY month
+    ROWS UNBOUNDED PRECEDING
+  ) AS agg_amount,
+  LAG(monthly, 12) OVER(    -- 12개월 전(작년 동월) 매출액 가져오기
+    ORDER BY year, month
+  ) AS last_year,
+  100.0 * SAFE_DIVIDE(      -- 작년 동월 대비 성장률(%) 계산: 100.0 * 당월 매출 / 12개월 전 매출
+    monthly,
+    LAG(monthly, 12) OVER(ORDER BY year, month)
+  ) AS rate
+
+FROM monthly_purchase
+ORDER BY
+  year_month;  
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+![img](../SQL_Master/image/Week2/9-8.png)
 
 
 ## 2. 다면적인 축을 사용해 데이터 집계하기
@@ -351,8 +470,7 @@ ORDER BY
 
 팬 차트: 어떤 기준 시점을 100%로 두고, 이후의 숫자 변동을 확인할 수 있게 해주는 그래프, 성장과 쇠퇴를 쉽게 파악할 수 있다.
 
-![img](../SQL_Master/image/Week2/팬차트
-.png)
+![img](../SQL_Master/image/Week2/팬차트.png)
 
 ```sql
 WITH
