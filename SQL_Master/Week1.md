@@ -106,7 +106,7 @@ r'https?://([^/]+)'
 │    └────────── ① http 또는 https 로 시작
 └─────────────── (참고: 문자열 앞 'r'은 백슬래시를 있는 그대로 쓰겠다는 의미)
 ```
-- REGEXP_EXTRACT 함수란?
+- `REGEXP_EXTRACT` 함수란?`
 ```
 1. 형식: REGEXP_EXTRACT(대상_컬럼, r'정규표현식_패턴')
 2. 역할: 패턴 내에서 괄호 ( )로 묶은 그룹(Capture Group)에 해당하는 문자열만 추출
@@ -179,14 +179,14 @@ FROM `1st_week.access_log`;
 
 ![img](../SQL_Master/image/Week1/6.png)
 
- - SPLIT 함수란?
+ - `SPLIT 함수란?`
 ```
 1. 형식: SPLIT(문자열_컬럼, '구분자')
 2. 역할: 지정한 구분자(delimiter)를 기준으로 문자열을 잘라 배열(Array) 형태로 반환함
 3. 구분자가 포함되어 있지 않으면 원본 문자열 1개만 담긴 배열을 반환함
 ```
 
- - SAFE_ORDINAL(n) 인덱싱이란?
+ - `SAFE_ORDINAL(n) 인덱싱이란?`
 ```
 1. 형식: 배열_컬럼[SAFE_ORDINAL(n)]
 2. 역할: 배열의 n번째 요소를 1부터 시작하는 순번 기준으로 추출함
@@ -216,7 +216,7 @@ SELECT
 
 **CAST 함수를 사용하는 방법이 가장 범용적**
 
-- CAST 함수란?: 데이터 타입 변환하는 함수
+- `CAST 함수란?: 데이터 타입 변환하는 함수`
 ```
 1. 형식: CAST(표현식 AS 목표_데이터타입)
 2. 역할: 특정 컬럼이나 값의 데이터 타입을 다른 타입(INT64, STRING, DATE 등)으로 명시적 변환함
@@ -269,7 +269,7 @@ SELECT
 #### 1-4-3 날짜/시각에서 특정 필드 추출하기
 **EXTRACT 함수 사용**
 
- - EXTRACT 함수란?
+ - `EXTRACT 함수란?`
 ```
 1. 형식: EXTRACT(추출할_부분 FROM 대상_컬럼)
 2. 역할: DATE, DATETIME, TIMESTAMP 등의 날짜/시간 데이터에서 원하는 특정 요소(연, 월, 일, 요일, 시간 등)만 숫자로 추출함
@@ -291,7 +291,7 @@ FROM (
 ![img](../SQL_Master/image/Week1/9-1.png)
 
 **SUBSTRING(SUBSTR) 함수 사용**
- - SUBSTRING(SUBSTR)란?
+ - `SUBSTRING(SUBSTR)란?`
 ```
 1. 형식: SUBSTR(문자열_컬럼, 시작_위치, [추출할_길이])
 2. 역할: 문자열의 특정 시작 위치부터 지정한 글자 수(길이)만큼 잘라내어 반환함 (시작 위치는 1부터 카운트)
@@ -350,7 +350,7 @@ ORDER BY purchase_id ASC
 
 ![img](../SQL_Master/image/Week1/10.png)
 
-- COALESCE 함수란?
+- `COALESCE 함수란?`
 ```
 1. 형식: COALESCE(값1, 값2, 값3, ...)
 2. 역할: 나열된 인자들을 왼쪽부터 순서대로 확인하여, '처음으로 NULL이 아닌 값'을 찾아 반환함
@@ -379,7 +379,7 @@ ORDER BY user_id ASC;
 
 **CASE 함수**를 이용하여 조건을 기술하고 조건에 맞는 값을 지정하거나, **SIGN 함수**를 이용하여 간단하게 증감 판정.
 
-- SIGN 함수란?
+- `SIGN 함수란?`
 ```
 1. 형식: SIGN(계산식)
 2. 역할: 숫자의 부호(양수, 0, 음수)를 판별하여 각각 1, 0, -1 중 하나를 반환함
@@ -407,7 +407,7 @@ ORDER BY year;
 
 컬럼 값에서 최댓값 또는 최솟값을 찾을 때는 **GREATEST 함수** 또는 **LEAST 함수**를 사용
 
-- GREATEST/LEAST 함수란?
+- `GREATEST/LEAST 함수란?`
 ```
 1. 형식: GREATEST(LEAST)(값1, 값2, 값3, ...)
 2. 역할: 나열된 여러 인자(컬럼 또는 값) 중 '최댓값(최솟값)'을 반환함
@@ -898,7 +898,7 @@ ORDER BY row ASC;
 ![img](../SQL_Master/image/Week1/22.png)
 
 #### 3-2-3 윈도 프레임 지정에 대해서
-**윈도 프레임 지정이란?**  
+- `윈도 프레임 지정이란?`  
 현재 레코드(현재 행)의 위치를 기준으로 **연산에 포함할 상대적인 행들의 범위(Window)**를 정의하는 구문입니다.
 
 ---
@@ -1094,7 +1094,7 @@ ORDER BY q.year, p.idx;
   - 리턴값이 테이블인 함수
   - BigQuery에는 unnest 함수가 있음
 
-- UNNEST 함수란?
+- `UNNEST 함수란?`
 ```
 1. 형식: UNNEST(배열_표현식)
 2. 역할: 배열(ARRAY) 안에 담긴 요소들을 풀어서 개별 행(Row)으로 전개(언피벗)함
@@ -1214,7 +1214,7 @@ ORDER BY m.category_id;
 
 상관 서브쿼리의 경우 내부에서 ORDER BY구문과 LIMIT 구문을 사용하여 데이터 압축 가능
 
-- 상관 서브쿼리와 스칼라 서브쿼리란?
+- `상관 서브쿼리와 스칼라 서브쿼리란?`
 ```
 스칼라 서브쿼리 (Scalar Subquery)
    - 단 하나의 값(1행 1열)만 반환하는 서브쿼리.
@@ -1232,7 +1232,7 @@ ORDER BY m.category_id;
 
 ### 4-3 조건 플래그를 0과 1로 표현하기:SIGN 함수 이용
 
-SIGN 함수란?
+- `SIGN 함수란?`
 ```
 1. 형식: SIGN(숫자_컬럼_또는_표현식)
 2. 역할: 수치 데이터의 '부호를 판정'하여 양수는 1, 0은 0, 음수는 -1로 단순화된 정수를 반환함
@@ -1400,7 +1400,7 @@ ORDER BY idx;
 ```
 !![img](../SQL_Master/image/Week1/41.png)
 
-- GENERATE_SERIES 함수란?
+- `GENERATE_SERIES` 함수란?`
 ```
 1. 형식: GENERATE_SERIES(시작값, 종료값 [, 증감값])
 2. 역할: 지정한 시작값부터 종료값까지 일정 간격(기본 1)으로 증가 또는 감소하는 일련의 연속된 수치나 날짜/시간 행(Row) 집합을 생성함
