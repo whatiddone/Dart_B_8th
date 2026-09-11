@@ -48,34 +48,130 @@
 매출을 집계하는 업무에서는 가로 축에 날짜, 세로 축에 금액을 표현하는 그래프를 사용
 
 ```sql
-여기에 코드를 적어주세요.
+-- 날짜별 매출과 평균 구매액을 집계하는 쿼리
+SELECT
+  dt,
+  sum(purchase_amount) as total_amount,
+  avg(purchase_amount) as average_amount
+FROM `2nd_week.purchase_log`
+GROUP BY dt;
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+![img](../SQL_Master/image/Week2/9-1.png)
  
 ### 1-2 이동평균을 사용한 날짜별 추이 보기
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+추이를 파악하기 위해서는 이동평균 사용
 
 ```sql
-여기에 코드를 적어주세요.
+-- 날짜별 매출과 7일 이동평균을 집계하는 쿼리
+SELECT
+  dt,
+  SUM(purchase_amount) AS total_amount,
+
+  -- 최근 최대 7일 동안의 이동 평균 계산하기
+  AVG(SUM(purchase_amount)) OVER(                               -- 일별 매출합계를 대상으로 이동 평균 연산 수행
+    ORDER BY dt                                                                  
+    ROWS BETWEEN 6 PRECEDING AND CURRENT ROW                    -- 직전 6개 행부터 현재 행까지(최대 7일치) 윈도우 범위 지정
+  ) AS seven_day_avg,                                           -- 누적 일수가 7일 미만인 초기 행도 존재하는 데이터 수만큼 나눠 평균 산출
+
+  -- 최근 7일 동안의 평균을 확실하게(정확히 7일 치가 모였을 때만) 계산하기
+  CASE
+    WHEN
+      7 = COUNT(*) OVER(                                        -- 윈도우 프레임 내 행 수가 정확히 7개인지 확인
+        ORDER BY dt                                             -- 날짜 기준 오름차순 정렬
+        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW                -- 직전 6개 행 + 현재 행 (총 7개 행 범위)
+      )
+    THEN
+      AVG(SUM(purchase_amount)) OVER(                           -- 데이터가 7개 꽉 찼을 때만 7일간의 이동 평균 계산
+        ORDER BY dt
+        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+      )
+    -- ELSE 생략 시 조건 불충족 행(1~6일 차)은 자동으로 NULL 반환
+  END AS seven_day_avg_strict                                   -- 최초 6일간은 왜곡 방지를 위해 NULL 처리하고 7일 차부터 계산된 엄격한 이동 평균
+
+FROM `2nd_week.purchase_log` 
+GROUP BY dt  
+ORDER BY dt;
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+![img](../SQL_Master/image/Week2/9-2.png)
+ 
+- `OVER 구문이란?`
+  - 앞에 적힌 함수를 '윈도우 함수'로 동작하게 만들어주는 필수 절
+  - 핵심 역할
+    - 행 보존 (행 압축 방지): 일반 `GROUP BY`는 100개 행을 그룹 수(예: 3개)로 압축해 버리지만, `OVER()`를 쓰면 원본 100개 행을 그대로 유지하면서 옆에 계산 결과 컬럼을 추가합니다.
+    - 연산 범위(Window)의 창문 정의: OVER( ... ) 괄호 안에 기준을 지정하여, "어떤 그룹으로 나누고(PARTITION BY), 어떤 순서로 정렬하며(ORDER BY), 현재 행을 기준으로 어디까지 계산할지(ROWS BETWEEN ...)"의 계산 영역을 정의합니다.
+  - 형식
+```sql
+함수() OVER (
+  [PARTITION BY 그룹_컬럼]   -- 1. 계산할 그룹 쪼개기 (생략 시 전체 데이터가 한 그룹)
+  [ORDER BY 정렬_컬럼]       -- 2. 그룹 내에서 행들의 정렬 순서 지정
+  [ROWS BETWEEN ...]        -- 3. 현재 행 기준 연산 대상 범위(윈도우 프레임) 지정
+)
+```
+
  
 ### 1-3 당월 매출 누계 구하기
 
 <!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
 
 ```sql
-여기에 코드를 적어주세요.
+-- 날짜별 매출과 당월 누계 매출을 집계하는 쿼리
+SELECT
+  dt,                                                                            
+  FORMAT_DATE('%Y-%m', PARSE_DATE('%Y-%m-%d', dt)) AS year_month,                 -- DATE형 변환 후 지정 포맷('YYYY-MM')으로 연-월 추출
+  SUM(purchase_amount) AS total_amount,      
+
+  -- 날짜형 기반 월별 누적 매출 계산
+  SUM(SUM(purchase_amount)) OVER(
+    PARTITION BY FORMAT_DATE('%Y-%m', PARSE_DATE('%Y-%m-%d', dt))                 -- DATE 포맷팅된 연-월 기준으로 월별 분할
+    ORDER BY dt
+    ROWS UNBOUNDED PRECEDING                                                      -- 윈도우 함수의 연산 범위를 '파티션(그룹)의 첫 번째 행부터 현재 행까지'로 지정
+  ) AS accumulated_amount                                  
+
+FROM `2nd_week.purchase_log`
+GROUP BY dt
+ORDER BY dt;
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+![img](../SQL_Master/image/Week2/9-3.png)
+
+```sql
+-- 날짜별 매출을 일시 테이블로 만드는 쿼리
+WITH daily_purchase AS(
+  SELECT
+    dt,
+    FORMAT_DATE('%Y', PARSE_DATE('%Y-%m-%d', dt)) AS year,
+    FORMAT_DATE('%m', PARSE_DATE('%Y-%m-%d', dt)) AS month,
+    FORMAT_DATE('%d', PARSE_DATE('%Y-%m-%d', dt)) AS date,
+    SUM(purchase_amount) AS purchase_amount,
+    COUNT(order_id) AS orders
+  FROM `2nd_week.purchase_log`
+  GROUP BY dt)
+SELECT
+  *
+FROM daily_purchase;
+```
+![img](../SQL_Master/image/Week2/9-4.png)
+```sql
+-- daily_purchase 테이블에 대해 당월 누계 매출을 집계하는 쿼리
+SELECT
+  dt,                                                                            
+  FORMAT_DATE('%Y-%m', PARSE_DATE('%Y-%m-%d', dt)) AS year_month, 
+  SUM(purchase_amount) AS purchase_amount,
+  SUM(SUM(purchase_amount)) OVER(
+    PARTITION BY FORMAT_DATE('%Y-%m', PARSE_DATE('%Y-%m-%d', dt)) 
+    ORDER BY dt
+    ROWS UNBOUNDED PRECEDING 
+  ) AS accumulated_amount
+FROM `2nd_week.purchase_log`
+```
+![img](../SQL_Master/image/Week2/9-5.png)
 
 ### 1-4 월별 매출의 작대비 구하기
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+작대비: yoy(전년 동기 대비 증감률)
 
 ```sql
 여기에 코드를 적어주세요.
