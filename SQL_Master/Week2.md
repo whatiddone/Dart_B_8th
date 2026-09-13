@@ -528,14 +528,158 @@ ORDER BY
 
 ### 2-4 히스토그램으로 구매 가격대 집계하기 
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
-
+히스토그램을 통해 데이터 분포를 잘 파악할 수 있음
+#### 2-4-1 임의의 계층 수로 히스토그램 만들기
 ```sql
-여기에 코드를 적어주세요.
+-- 최댓값, 최솟값, 범위를 구하는 쿼리
+WITH
+stats AS (
+  SELECT
+    MAX(price) AS max_price,                           -- 금액의 최댓값
+    MIN(price) AS min_price,                           -- 금액의 최솟값
+    MAX(price) - MIN(price) AS range_price,            -- 금액의 범위
+    10 AS bucket_num                                   -- 데이터를 나눌 구간 수 
+  FROM
+    `2nd_week.purchase_detail_log`
+)
+SELECT *
+FROM stats;
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+![img](../SQL_Master/image/Week2/10-4.png)
 
+```
+최소 금액에서 최고 금액의 범위를 계층으로 분할하려면, 일단 매출 금액에서 최소 금액을 뺸 뒤, 계층을 판정하기 위한 정규화 금액(diff) 계산을 계산해야 합니다. 이어서 첫 번째 계층의 범위(bucket_range)는 금액 범위(range_price)를 계급 수(bucket_num)로 나눈어 구할 수 있습니다. 정규화 금액을 계급 범위로 나누고 FLOOR 함수를 사용해 소수 자리를 벌리면, 해당 매출 금액이 어떤 계급에 포함되는지 판정할 수 있습니다.
+```
 
+```sql
+-- 데이터의 계층을 구하는 쿼리
+WITH
+stats AS (
+  SELECT
+    MAX(price) AS max_price,                           -- 금액의 최댓값
+    MIN(price) AS min_price,                           -- 금액의 최솟값
+    MAX(price) - MIN(price) AS range_price,            -- 금액의 범위
+    10 AS bucket_num                                   -- 데이터를 나눌 구간 수 
+  FROM
+    `2nd_week.purchase_detail_log`
+)
+, purchase_log_with_bucket AS(
+  SELECT
+    price, min_price, price - min_price AS diff, 1.0*range_price/bucket_num AS bucket_range, 
+    FLOOR(
+      1.0*(price - min_price)
+      /(1.0*range_price/bucket_num)
+      )+1 AS bucket
+  FROM
+    `2nd_week.purchase_detail_log`, stats
+)
+SELECT *
+FROM purchase_log_with_bucket
+ORDER BY price;
+```
+![img](../SQL_Master/image/Week2/10-5.png)
 
+stats 테이블의 정의에서 계급 상한을 <금액의 최댓값>+1해서, 모든 레코드가 계급 상한 미만이 되도록 만들어주면, 모든 레코드가 지정한 범위 내에 들어간다.
+
+```sql
+-- 계급 상한 값을 조정한 쿼리
+WITH
+  stats AS(
+    SELECT
+      MAX(price) +1 AS max_price,                        -- <금액의 최댓값> + 1
+      MIN(price) AS min_price,                           -- 금액의 최솟값
+      MAX(price) + 1 - MIN(price) AS range_price,            -- 금액의 범위 + 1 
+      10 AS bucket_num                                   -- 데이터를 나눌 구간 수
+    FROM
+    `2nd_week.purchase_detail_log`
+) 
+, purchase_log_with_bucket AS(
+  SELECT
+    price, min_price, price - min_price AS diff, 1.0*range_price/bucket_num AS bucket_range, 
+    FLOOR(
+      1.0*(price - min_price)
+      /(1.0*range_price/bucket_num)
+      )+1 AS bucket
+  FROM
+    `2nd_week.purchase_detail_log`, stats
+)
+SELECT *
+FROM purchase_log_with_bucket
+ORDER BY price;
+```
+![img](../SQL_Master/image/Week2/10-6.png)
+```sql
+-- 히스토그램을 구하는 쿼리
+WITH
+  stats AS(
+    SELECT
+      MAX(price) +1 AS max_price,                        -- <금액의 최댓값> + 1
+      MIN(price) AS min_price,                           -- 금액의 최솟값
+      MAX(price) + 1 - MIN(price) AS range_price,            -- 금액의 범위 + 1 
+      10 AS bucket_num                                   -- 데이터를 나눌 구간 수
+    FROM
+    `2nd_week.purchase_detail_log`
+) 
+, purchase_log_with_bucket AS(
+  SELECT
+    price, min_price, price - min_price AS diff, 1.0*range_price/bucket_num AS bucket_range, 
+    FLOOR(
+      1.0*(price - min_price)
+      /(1.0*range_price/bucket_num)
+      )+1 AS bucket
+  FROM
+    `2nd_week.purchase_detail_log`, stats
+)
+SELECT
+  bucket,                                                    
+  min_price + bucket_range * (bucket - 1) AS lower_limit,    -- 계층의 하한값 계산 (이상)
+  min_price + bucket_range * bucket       AS upper_limit,    -- 계층의 상한값 계산 (미만)
+  COUNT(price)                            AS num_purchase,   -- 해당 계층의 도수(구매 건수) 집계
+  SUM(price)                              AS total_amount    -- 해당 계층의 합계 금액 집계
+FROM
+  purchase_log_with_bucket
+GROUP BY
+  bucket,
+  min_price,
+  bucket_range
+ORDER BY
+  bucket;
+```
+![img](../SQL_Master/image/Week2/10-7.png)
+#### 2-4-2 임의의 계층 너비로 히스토그램 만들기
+```sql
+-- 히스토그램의 상한과 하한을 수동으로 조정한 쿼리
+WITH
+  stats AS (
+    SELECT
+      50000 AS max_price,                 -- 금액의 최댓값
+      0 AS min_price,                     -- 금액의 최솟값
+      50000 AS range_price,               -- 금액의 범위
+      10 AS bucket_num                    -- 계층 수
+    FROM
+       `2nd_week.purchase_detail_log`
+  )
+  , purchase_log_with_bucket AS(
+  SELECT
+    price, min_price, price - min_price AS diff, 1.0*range_price/bucket_num AS bucket_range, 
+    FLOOR(
+      1.0*(price - min_price)
+      /(1.0*range_price/bucket_num)
+      )+1 AS bucket
+  FROM
+    `2nd_week.purchase_detail_log`, stats
+)
+SELECT
+  bucket,
+  min_price+bucket_range*(bucket-1) AS lower_limit,
+  min_price+bucket_range*bucket AS upper_limit,
+  COUNT(price) AS num_purchase,
+  SUM(price) AS total_amount
+FROM purchase_log_with_bucket
+GROUP BY
+  bucket, min_price, bucket_range
+ORDER BY bucket;
+```
+![img](../SQL_Master/image/Week2/10-8.png)
 ### 🎉 수고하셨습니다.
