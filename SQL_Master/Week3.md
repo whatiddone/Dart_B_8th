@@ -342,6 +342,7 @@ GROUP BY
   category;
 ```
 ![img](../SQL_Master/image/Week3/11-7.png)
+
 **결과 설명 / 주의점**
 - `category` 컬럼은 연령과 성별을 결합한 구분 코드입니다.
 - `COUNT(*)`는 각 구분 코드별 사용자 수를 계산합니다.
@@ -581,6 +582,7 @@ ORDER BY
   has_purchase, has_review, has_favorite;
 ```
 ![img](../SQL_Master/image/Week3/11-12.png)
+
 **결과 설명 / 주의점**
 - `has_purchase`, `has_review`, `has_favorite` 컬럼의 값이 없는(NULL) 레코드는 해당 액션을 했는지 안 했는지 모르는 경우를 의미합니다.
 - 결과는 모든 가능한 액션 조합에 대한 사용자 수가 포함되어 있습니다.
@@ -787,8 +789,9 @@ ORDER BY
 ;
 ```
 ![img](../SQL_Master/image/Week3/11-13.png)
+
 **결과 설명 / 주의점**
----
+
 1. 결과 설명
 * **벤다이어그램 세그먼트 집계**: 3가지 주요 액션(`purchase`, `review`, `favorite`)의 수행 여부에 따른 유저 분포를 벤다이어그램 형태로 분해하여 집계합니다.
 * **출력 라벨 의미**:
@@ -1357,7 +1360,7 @@ SELECT
   COUNT(CASE WHEN f = 1 THEN 1 END) AS f_1       -- R 점수 그룹 내에서 F(구매 빈도) 랭크가 1인 사용자 수 집계 (피벗 열 5)
 
   -- 동작 원리: 세로로 긴 R(행)과 F(열)의 교차 데이터를 2차원 매트릭스 형태로 펼치는 조건부 집계 피벗(Conditional Aggregation Pivot) 기법입니다. CASE WHEN으로 해당 F 등급만 1로 남겨두고 나머지는 NULL로 처리한 뒤, COUNT() 함수가 NULL을 자동으로 집계에서 제외하는 특성을 활용해 등급별 인원수를 열(Column)로 전개합니다.
-  
+
 FROM
   user_rfm_rank
 GROUP BY
