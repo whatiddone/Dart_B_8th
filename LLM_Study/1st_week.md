@@ -32,7 +32,7 @@ Context Window: 한번에 처리할 수 있는 최대 길이(Token 총량)<br>
     - HumanMessage: 사용자
     - AIMessage: 모델의 응답이나 LLM 출력 결과 처리
     - ToolMessage: 외부 세계와 소통하는 인터페이스: tool_call_id와 함께 전달
-## LECLL 파이프 연산자로 체인 구성
+## LECL 파이프 연산자로 체인 구성
 - 체인 정의 시, 각각 요소들을 |(파이프 연산자)로 구분
     - 첫 번째 요소의 출력이 두 번째 요소의 입력 ...
 - StrOutputParcer: 모델의 텍스트 응답만 따로 출력해 주는 파서
