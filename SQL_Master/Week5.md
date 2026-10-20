@@ -402,7 +402,7 @@ FROM `5th_week.activity_log`
 * **파티션 전체 범위에서 최상위/최하위 값 추출 (`FIRST_VALUE`, `LAST_VALUE` 사용 시 필수):**
   ```sql
   ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-![alt text](image.png)
+![img](../SQL_Master/image/Week5/15-1.png)
 
 ```sql
 WITH landing_exit AS(
@@ -447,7 +447,7 @@ UNION ALL
 SELECT 'exit' AS type, *
 FROM exit_count
 ```
-![alt text](image-1.png)
+![img](../SQL_Master/image/Week5/15-2.png)
 
 #### 2-1-2 어디에서 조회를 시작해서, 어디에서 이탈하는지 집계하기
 ```sql
@@ -480,7 +480,7 @@ FROM landing_exit
 GROUP BY
     landing, exit;
 ```
-![alt text](image-2.png)
+![img](../SQL_Master/image/Week5/15-3.png)
 
 ### 2-2 이탈률과 직귀율 계산하기
 
@@ -509,7 +509,7 @@ SELECT
 FROM exit_flag
 GROUP BY path;
 ```
-![alt text](image-3.png)
+![img](../SQL_Master/image/Week5/15-4.png)
 ```sql
 -- 경로들의 직귀율을 집계하는 쿼리
 WITH landing_bounce_flag AS(
@@ -537,7 +537,8 @@ SELECT
 FROM landing_bounce_flag
 GROUP BY path;
 ```
-![alt text](image-4.png)
+![img](../SQL_Master/image/Week5/15-5.png)
+
 
 ### 2-3 성과로 이어지는 페이지 파악하기 
 
@@ -581,7 +582,7 @@ GROUP BY path
 ORDER BY cvr DESC;
 ```
 
-![alt text](image-5.png)
+![img](../SQL_Master/image/Week5/15-6.png)
 
 `MAX 함수 내부 구조`
 ```
@@ -750,7 +751,8 @@ LEFT JOIN page_total_value AS v
 
 ORDER BY a.access_cnt DESC;
 ```
-   ![alt text](image-6.png)
+![img](../SQL_Master/image/Week5/15-7.png)
+
 
 
 ### 2-5 검색 조건들의 사용자 행동 가시화하기 
@@ -802,7 +804,7 @@ ORDER BY search_count DESC;
 
 > 바로 다음 페이지가 `/detail`인 경우만 클릭으로 인정하고 싶다면 `LEAD()` 또는 `LAG()`를 사용해 직전/직후 이동만 판정하면 된다.
 
-![alt text](image-7.png)
+![img](../SQL_Master/image/Week5/15-8.png)
 
 ### 2-6 폴아웃 리포트를 사용해 사용자 회유를 가시화하기 
 
@@ -892,7 +894,7 @@ SELECT
 FROM funnel
 ORDER BY step;
 ```
-![alt text](image-8.png)
+![img](../SQL_Master/image/Week5/15-9.png)
 
 ### 2-7 사이트 내부에서 사용자 흐름 파악하기 
 
@@ -945,7 +947,8 @@ GROUP BY prev_2, prev_1, current_path, next_1, next_2
 ORDER BY flow_count DESC;
 ```
 
-![alt text](image-9.png)
+![img](../SQL_Master/image/Week5/15-10.png)
+
 
 ### 2-8 페이지 완독률 집계하기 
 
@@ -969,7 +972,7 @@ ORDER BY
     url, count DESC
 ```
 
-![alt text](image-10.png)
+![img](../SQL_Master/image/Week5/15-11.png)
 
 ### 2-9 사용자 행동 전체를 시각화하기 
 
@@ -977,53 +980,257 @@ ORDER BY
 - 사이트 외부 유입 → 랜딩 페이지 → 검색 → 상세 페이지 → 입력 → 완료까지를 하나의 **조감도**로 연결해 전체 흐름을 본다.
 - 분석의 목적은 **어디에서 사용자가 많이 들어오고 어디에서 막히는지**를 한눈에 파악해 개선 우선순위를 정하는 것이다.
 
-```sql
-여기에 코드를 적어주세요.
-```
-
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
 
 ## 3. 입력 양식 최적화하기 
 
+- **엔트리 폼(Entry Form)**: 자료 청구 양식과 구매 양식 등
+- 입력 양식 최적화(EFO, Entry Form Optimization)는 입력 과정에서의 오류와 이탈을 줄여 최종 전환율을 높이는 작업이다.
+    - 필수 입력과 선택 입력을 명확하게 구분해서 입력 수를 줄인다
+        - 필수 입력 항목을 위로 올려 배치한다.
+    - 오류 발생 빈도를 줄인다
+        - 입력 예를 보여준다
+        - 입력에 실수가 있었음을 실시간으로 알려준다
+    - 쉽게 입력할 수 있게 만든다
+        - 입력 항목을 줄인다
+        - 우편번호와 주소 등에는 자동 완성 기능을 사용한다
+    - 이탈할 만한 요소를 제거한다.
+        - 불필요한 링크를 제거한다(메뉴 단순화 등)
+        - 실수로 이탈하지 않게 페이지를 벗어날 때 확인 대화 상자를 띄워 이탈할 것인지를 다시 한 번 묻는다.
+- 문제를 명확하게 파악하고, 해결책이 어떤 효과를 가져올지 수치화 할 수 있어야 한다.
+- 핵심 지표는 **오류율, 입력→확인 이동률, CVR, 이탈률, 입력 양식 직귀율**이다.
+
 ### 3-1 오류율 집계하기 
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+- 같은 `/regist/confirm` URL이라도 정상 확인 화면과 오류 화면이 존재할 수 있으므로 `status` 같은 상태값을 함께 로그에 남기는 것이 중요하다.
+- `status = 'error'`를 1로 바꾸면 오류 수와 오류율을 쉽게 계산할 수 있다.
 
 ```sql
-여기에 코드를 적어주세요.
+-- 확인 화면에서의 오류율을 집계하는 쿼리
+SELECT
+    COUNT(*) AS confirm_count,
+    SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) AS error_count,
+    AVG(CASE WHEN status = 'error' THEN 1.0 ELSE 0.0 END) AS error_rate,
+    SUM(CASE WHEN status = 'error' THEN 1.0 ELSE 0.0 END)/COUNT(DISTINCT session) AS error_per_user
+FROM `5th_week.form_log`
+WHERE path = '/regist/confirm'; -- 확인 화면 페이지 판정하기
 ```
+![img](../SQL_Master/image/Week5/16-1.png)
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
 
 ### 3-2 입력 ~ 확인 ~ 완료까지의 이동률 집계하기 
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+- 입력 양식에서는 `/regist/input → /regist/confirm → /regist/complete`의 이동률을 확인한다.
+- 입력 → 확인 비율은 **확정률**, 입력 → 완료 비율은 **CVR**, `100% - CVR`은 **이탈률**로 볼 수 있다.
+- 오류 화면은 정상적인 다음 단계로 간주하지 않도록 제외한다.
 
 ```sql
-여기에 코드를 적어주세요.
+-- 입력 양식의 폴아웃 리포트
+WITH mst_fallout_step AS (
+
+    -- 폴아웃에서 확인할 단계와 순서를 미리 정의
+    SELECT 1 AS step, '/regist/input' AS path
+    UNION ALL
+    SELECT 2 AS step, '/regist/confirm' AS path
+    UNION ALL
+    SELECT 3 AS step, '/regist/complete' AS path
+),
+
+form_log_with_fallout_step AS (
+
+    SELECT
+        l.session,
+        m.step,
+        m.path,
+
+        MAX(TIMESTAMP(l.stamp)) AS max_stamp,    -- 해당 세션이 이 단계에 '마지막으로' 접근한 시간
+                                                -- 사용자가 같은 페이지를 여러 번 방문한 경우까지 고려
+
+        MIN(TIMESTAMP(l.stamp)) AS min_stamp     -- 해당 세션이 이 단계에 '처음' 접근한 시간
+
+    FROM mst_fallout_step AS m
+
+    JOIN `5th_week.form_log` AS l
+        ON m.path = l.path                       -- 실제 로그와 폴아웃 단계 연결
+
+    WHERE COALESCE(l.status, '') = ''           -- error 화면은 정상 단계 진행으로 보지 않고 제외
+                                                -- 내가 만든 단순 버전은 confirm에서만 error를 제외했지만
+                                                -- 책에서는 전체 로그에서 정상 상태만 사용
+
+    GROUP BY
+        l.session,
+        m.step,
+        m.path
+),
+
+form_log_with_mod_fallout_step AS (
+
+    SELECT
+        session,
+        step,
+        path,
+        max_stamp,
+
+        LAG(min_stamp) OVER (
+            PARTITION BY session
+            ORDER BY step
+        ) AS lag_min_stamp,                      -- 바로 직전 단계의 '최초 접근 시간'
+                                                -- 예: confirm 행에서는 input의 최초 접근 시간
+
+        MIN(step) OVER (
+            PARTITION BY session
+        ) AS min_step,                           -- 해당 세션이 가장 처음 도달한 단계 번호
+                                                -- 반드시 step 1(input)부터 시작한 세션인지 확인하기 위해 사용
+
+        COUNT(*) OVER (
+            PARTITION BY session
+            ORDER BY step
+            ROWS BETWEEN UNBOUNDED PRECEDING
+                     AND CURRENT ROW
+        ) AS cum_count                           -- 지금 단계까지 실제로 몇 개의 단계를 거쳤는지 누적 계산
+                                                -- step 번호와 같아야 중간 단계를 건너뛰지 않은 것
+
+    FROM form_log_with_fallout_step
+),
+
+fallout_log AS (
+
+    SELECT
+        session,
+        step,
+        path
+
+    FROM form_log_with_mod_fallout_step
+
+    WHERE
+        min_step = 1                             -- 반드시 /regist/input(step 1)부터 시작한 세션만 사용
+
+        AND step = cum_count                     -- 단계가 빠짐없이 연결됐는지 확인
+                                                -- 예: step 3인데 cum_count=2이면
+                                                -- step 2를 건너뛴 것이므로 제외
+
+        AND (
+            lag_min_stamp IS NULL                -- step 1은 이전 단계가 없으므로 허용
+            OR max_stamp >= lag_min_stamp        -- 현재 단계의 마지막 접근 시간이
+                                                -- 이전 단계의 최초 접근 이후인지 확인
+                                                -- 반복 방문/뒤로가기까지 어느 정도 고려하는 부분
+        )
+)
+
+SELECT
+    step,
+    path,
+
+    COUNT(*) AS access_count,                    -- 각 단계까지 정상적으로 도달한 세션 수
+
+    ROUND(
+        100.0 * SAFE_DIVIDE(
+            COUNT(*),
+
+            FIRST_VALUE(COUNT(*)) OVER (
+                ORDER BY step
+                ROWS BETWEEN UNBOUNDED PRECEDING
+                         AND UNBOUNDED FOLLOWING
+            )
+        ),
+        2
+    ) AS first_trans_rate,                       -- 최초 단계(input) 대비 현재 단계 도달률
+                                                -- input → confirm → complete 전체 퍼널 비율
+
+    ROUND(
+        100.0 * SAFE_DIVIDE(
+            COUNT(*),
+            LAG(COUNT(*)) OVER (
+                ORDER BY step
+            )
+        ),
+        2
+    ) AS step_trans_rate                         -- 바로 직전 단계 대비 이동률
+                                                -- 예: confirm → complete 전환율
+
+FROM fallout_log
+
+GROUP BY
+    step,
+    path
+
+ORDER BY
+    step;
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+![img](../SQL_Master/image/Week5/16-2.png)
 
 ### 3-3 입력 양식 직귀율 집계하기 
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+- 입력 화면에는 도달했지만 확인 또는 완료 화면으로 전혀 진행하지 않은 세션을 **입력 양식 직귀**로 본다.
+- 직귀율이 높다면 입력 항목이 너무 많거나, 양식 구조가 복잡하거나, 입력 화면으로 오기 전 사용자의 동기 부여가 부족할 수 있다.
 
 ```sql
-여기에 코드를 적어주세요.
+-- 날짜별 입력 양식 직귀율 집계
+WITH form_progress AS (
+    SELECT
+        DATE(TIMESTAMP(stamp)) AS dt,
+        session,
+
+        MAX(CASE
+                WHEN path = '/regist/input' THEN 1
+                ELSE 0
+            END) AS has_input,
+
+        MAX(CASE
+                WHEN path IN ('/regist/confirm', '/regist/complete') THEN 1
+                ELSE 0
+            END) AS has_progress
+
+    FROM `5th_week.form_log`
+    GROUP BY dt, session
+)
+
+SELECT
+    dt,
+    COUNT(1) AS input_count,
+    SUM(CASE WHEN has_progress = 0 THEN 1 ELSE 0 END) AS bounce_count,
+    100.0*AVG(CASE WHEN has_progress = 0 THEN 1 ELSE 0 END) AS bounce_rate
+FROM form_progress
+WHERE has_input = 1 -- 입력 화면에 방문했던 세션만 추출하기
+GROUP BY dt
+ORDER BY dt;
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+![img](../SQL_Master/image/Week5/16-3.png)
+
+> 페이지 열람 로그만으로는 사용자가 실제로 입력을 시작했는지 알 수 없다. 더 정확하게 분석하려면 첫 입력이나 첫 클릭 시 별도 이벤트 로그를 남기는 것이 좋다.
+
+
 
 ### 3-4 오류가 발생하는 항목과 내용 집계하기 
 
-<!-- 이 부분을 지우고 새롭게 배운 내용을 자유롭게 정리해주세요. -->
+- 전체 오류율만 보면 원인을 알 수 없으므로 `form`, `field`, `error_type` 단위로 오류를 세분화한다.
+- 각 입력 양식에서 어떤 항목과 오류 유형이 가장 큰 비중을 차지하는지 확인해 개선 우선순위를 정한다.
+- 입력값에는 개인정보가 포함될 수 있으므로 원문 값을 로그에 그대로 저장하지 않도록 주의해야 한다.
 
 ```sql
-여기에 코드를 적어주세요.
+-- 입력 양식별 오류 발생 위치와 원인 집계
+SELECT
+    form,
+    field,
+    error_type,
+    COUNT(1) AS error_count,
+    100.0 * COUNT(*)/ SUM(COUNT(*)) OVER (PARTITION BY form) AS share
+FROM `5th_week.form_error_log`
+GROUP BY form, field, error_type
+ORDER BY form, error_count DESC;
 ```
 
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
+![img](../SQL_Master/image/Week5/16-4.png)
+---
+
+**### 핵심 정리**
+
+- 검색 조건 분석: `CTR + CVR`로 어떤 검색 방법이 성과로 이어지는지 확인
+- 폴아웃 분석: 주요 단계별로 사용자가 어디에서 가장 많이 이탈하는지 확인
+- 사용자 흐름: `LAG / LEAD`로 특정 페이지 전후 행동 확인
+- 완독률: 단순 페이지 뷰가 아니라 실제 콘텐츠 소비 정도 확인
+- EFO: 오류율, 단계 이동률, 직귀율, 오류 원인을 함께 분석해 입력 양식 개선
 
 
 ### 🎉 수고하셨습니다.
