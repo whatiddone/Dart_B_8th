@@ -78,7 +78,8 @@ GROUP BY stamp::timestamp::date
 ORDER BY dt;
 ```
 
-![alt text](image.png)
+![img](../SQL_Master/image/Week7/image.png)
+
 ```sql
 -- NoMatch 키워드를 집계하는 쿼리
 WITH search_keyword_stat AS (
@@ -100,7 +101,7 @@ FROM search_keyword_stat
 WHERE result_num = 0
 ORDER BY search_count DESC, keyword;
 ```
-![alt text](image-1.png)
+![img](../SQL_Master/image/Week7/image-1.png)
 
 - `no_match_rate`: 0~1의 비율이다. `0.05`이면 5%이다.
 - `search_share`: 해당 NoMatch 키워드의 검색 수 / 전체 검색 수 × 100.
@@ -145,7 +146,7 @@ WHERE action = 'search'
 GROUP BY stamp::timestamp::date
 ORDER BY dt;
 ```
-![alt text](image-2.png)
+![img](../SQL_Master/image/Week7/image-2.png)
 
 ```sql
 -- 재검색 전후 키워드 확인하기
@@ -173,7 +174,7 @@ WHERE action = 'search'
 GROUP BY keyword, result_num, next_keyword, next_result_num
 ORDER BY retry_count DESC, keyword, next_keyword;
 ```
-![alt text](image-3.png)
+![img](../SQL_Master/image/Week7/image-3.png)
 
 **`LEAD`를 계산한 다음 검색 로그를 추출해야 한다.** 먼저 검색 로그만 남기면 중간의 상세 페이지 이동이 사라져 재검색이 아닌 경우까지 재검색으로 계산된다. 또한 같은 세션 안에서 시각이 같은 로그가 있다면 실제 이벤트 순서를 나타내는 ID 등을 추가 정렬 기준으로 사용해야 한다.
 
@@ -237,7 +238,7 @@ FROM classified_retry
 GROUP BY retry_type, keyword, result_num, next_keyword, next_result_num
 ORDER BY retry_type, retry_count DESC, keyword, next_keyword;
 ```
-![alt text](image-4.png)
+![img](../SQL_Master/image/Week7/image-4.png)
 
 교재의 조건별 조회를 하나의 `CASE`로 묶고, 앞 조건을 우선 적용해 분류가 겹치지 않도록 했다. 문자열에 포함된다는 사실만으로 검색 의도를 확정할 수는 없으므로 구체화 **후보**로 해석한다. 다른 검색어로 바꾸었다고 해서 두 단어가 반드시 동의어인 것도 아니다.
 
@@ -278,7 +279,7 @@ WHERE action = 'search'
 GROUP BY stamp::timestamp::date
 ORDER BY dt;
 ```
-![alt text](image-5.png)
+![img](../SQL_Master/image/Week7/image-5.png)
 
 **검색 이탈이 발생한 키워드**
 
@@ -307,7 +308,7 @@ GROUP BY keyword, result_num
 HAVING SUM(CASE WHEN next_action IS NULL THEN 1 ELSE 0 END) > 0
 ORDER BY exit_count DESC, keyword, result_num;
 ```
-![alt text](image-6.png)
+![img](../SQL_Master/image/Week7/image-6.png)
 
 이 정의는 액션 값이 결손되지 않은 로그를 전제로 한다. 또한 관측 기간이 끝나 다음 행동을 수집하지 못한 경우나 로그 누락도 이탈처럼 보일 수 있다. 검색 결과 화면에서 필요한 정보를 얻고 떠난 경우도 있으므로, 이탈률만으로 불만족을 확정하지 않는다.
 
@@ -364,7 +365,7 @@ ORDER BY dt;
 
 키워드별로 보고 싶으면 마지막 집계의 `SELECT`, `GROUP BY`를 `keyword` 기준으로 변경한다. NoMatch 후 재검색하거나 이탈할 수 있으므로 **세 비율의 합이 1이 될 필요는 없다.** 같은 중간 데이터를 CTE·뷰·집계 테이블로 관리하면 지표 간 기준 차이를 줄일 수 있다.
 
-![alt text](image-7.png)
+![img](../SQL_Master/image/Week7/image-7.png)
 
 ### 1-6 검색 결과의 포괄성을 지표화 하기
 
@@ -423,7 +424,7 @@ FROM cumulative_result
 ORDER BY keyword, rank ASC NULLS LAST, item;
 ```
 
-![alt text](image-8.png)
+![img](../SQL_Master/image/Week7/image-8.png)
 
 `rank IS NULL`인 행은 검색되지 않은 정답이다. 이 행의 `recall = 0`은 교재와 맞춘 표시용 값이며, 실제 순위의 Recall을 의미하지 않는다.
 
@@ -471,7 +472,7 @@ SELECT
 FROM recall_at_5_by_keyword
 ORDER BY keyword;
 ```
-![alt text](image-9.png)
+![img](../SQL_Master/image/Week7/image-9.png)
 
 검색 결과가 5개보다 적더라도 분모는 **전체 정답 수**이다. 마지막 평균은 키워드별 값을 동일한 가중치로 평균한 값이다. `NULL`은 `AVG`에서 제외되므로 정답 미정의 키워드는 별도로 확인한다.
 
@@ -527,7 +528,7 @@ SELECT
 FROM cumulative_result
 ORDER BY keyword, rank ASC NULLS LAST, item;
 ```
-![alt text](image-10.png)
+![img](../SQL_Master/image/Week7/image-10.png)
 
 **키워드별 상위 5개 정확률과 전체 평균**
 
@@ -576,7 +577,7 @@ SELECT
 FROM precision_at_5_by_keyword
 ORDER BY keyword;
 ```
-![alt text](image-11.png)
+![img](../SQL_Master/image/Week7/image-11.png)
 
 | 지표 | 분모 | 확인하는 것 |
 | --- | --- | --- |
@@ -584,8 +585,6 @@ ORDER BY keyword;
 | Precision | 출력한 검색 결과 수 | 보여준 결과 중 얼마나 정답인가 |
 
 정확률과 재현율은 해당 범위 안에서 정답이 어느 순서로 배치되었는지는 구분하지 못한다. 정답의 순위까지 평가하려면 다음 절의 AP·MAP 등을 사용한다.
-
-<!-- 이 부분을 지우고 실행 결과 화면을 제출해주세요. -->
 
 ### 1-8 검색 결과 순위와 관련된 지표 계산하기
 
@@ -651,7 +650,7 @@ SELECT
 FROM average_precision_by_keyword
 ORDER BY keyword;
 ```
-![alt text](image-12.png)
+![img](../SQL_Master/image/Week7/image-12.png)
 
 정답 아이템이 4개이고 모두 1~4위에 있으면 AP는 100%이다. 같은 4개가 7~10위에 있다면 각 정답이 나타날 때의 Precision이 낮아져 AP도 낮아진다.
 
@@ -676,8 +675,6 @@ Recall·Precision·AP·MAP은 여기서 0~100의 백분율로 출력했다. 정�
 ### 2-1 어소시에이션 분석
 
 상품 A를 구매한 주문에서 상품 B도 함께 구매한 비율을 구하고, B 자체의 인기도와 비교한다. `A → B`와 `B → A`는 조건으로 삼는 상품이 다르므로 확신도가 다를 수 있다.
-
-**사용 데이터:** `purchase_detail_log` / p.504~512.
 
 **핵심 로직**
 
@@ -739,15 +736,14 @@ SELECT
 FROM product_pair_with_stat
 ORDER BY p1, p2;
 ```
-![alt text](image-13.png)
+![img](../SQL_Master/image/Week7/image-13.png)
+
 - `support`, `confidence`는 백분율, `lift`는 배수이다.
 - `lift > 1`이면 A가 있는 주문에서 B가 더 자주 함께 나타난다. `lift = 1`이면 이 지표상 추가 연관이 없고, `lift < 1`이면 덜 나타난다.
 - A·B의 지지도와 리프트는 방향을 바꾸어도 같지만, 확신도는 분모가 달라 달라질 수 있다.
 - 리프트가 높더라도 실제 동시 구매가 1건뿐일 수 있으므로 주문 수와 지지도를 함께 확인한다.
 
 이 분석은 **같은 주문 안의 연관성**을 계산한다. A를 먼저 구매해서 나중에 B를 구매했다는 시간 순서나 인과관계를 입증하지 않는다. `p2_count`는 B만 구매한 주문 수가 아니라 **A와 함께 구매한 주문까지 포함한 B 전체 주문 수**이다.
-
-<!-- 2-1 / 22-1 실행 결과 화면은 직접 실습한 뒤 첨부 -->
 
 ## 3. 추천
 
@@ -756,8 +752,6 @@ ORDER BY p1, p2;
 ### 3-1 추천 시스템의 넓은 의미
 
 추천을 만들기 전에 어떤 정보를 누구에게, 어떤 목적으로 보여줄지 정한다. 문구가 아니라 실제 계산에 사용한 기준으로 추천 방식을 구분한다.
-
-**학습 범위:** p.514~518. 개념 중심의 절이다.
 
 **핵심 내용**
 
@@ -786,8 +780,6 @@ ORDER BY p1, p2;
 
 사용자별 상품 열람·구매 점수를 만들고, 공통 사용자의 행동이 비슷한 상품을 찾는다. 이를 **Item to Item 추천**에 사용한다.
 
-**사용 데이터:** 23강 `action_log` / p.519~526.
-
 **핵심 로직**
 
 - 사용자·상품별로 열람 수와 구매 수를 집계한다.
@@ -815,7 +807,8 @@ SELECT *
 FROM ratings
 ORDER BY user_id, score DESC, product;
 ```
-![alt text](image-14.png)
+![img](../SQL_Master/image/Week7/image-14.png)
+
 열람·구매의 3:7은 **횟수에 곱하는 계수의 비율**이다. 열람 횟수가 훨씬 많다면 열람의 총 기여도가 더 커질 수도 있다.
 
 **내적과 코사인 유사도로 관련 상품 순위 만들기**
@@ -864,18 +857,15 @@ SELECT
 FROM item_similarities
 ORDER BY target, rank;
 ```
-![alt text](image-15.png)
+![img](../SQL_Master/image/Week7/image-15.png)
+
 L2 노름은 `SQRT(점수 제곱의 합)`이다. 상품별로 정규화하므로 `PARTITION BY product`를 사용한다. 원래 내적은 점수 크기의 영향을 많이 받지만 코사인 유사도는 벡터의 방향을 비교한다.
 
 이 예시는 점수가 음수가 아니므로 코사인 유사도가 0~1 범위이다. 1은 두 벡터의 방향이 같다는 뜻이며 상품 자체가 동일하다는 뜻은 아니다. 공통 사용자가 없는 상품 페어는 JOIN 결과에 나타나지 않는다. 자기 자신을 추천하지 않도록 같은 상품 페어는 제외했다.
 
-<!-- 3-2 / 23-2 실행 결과 화면은 직접 실습한 뒤 첨부 -->
-
 ### 3-3 당신을 위한 추천 상품
 
 행동이 비슷한 사용자를 찾고, 그 사용자가 관심을 보인 상품을 추천 후보로 가져온다. 이를 **사용자 기반 협업 필터링**으로 구현한다.
-
-**사용 데이터:** 23강 `action_log` / p.526~531.
 
 **핵심 로직**
 
@@ -931,7 +921,8 @@ SELECT *
 FROM related_users
 ORDER BY user_id, neighbor_rank;
 ```
-![alt text](image-16.png)
+![img](../SQL_Master/image/Week7/image-16.png)
+
 Item to Item과 달리 사용자 벡터를 정규화하므로 `PARTITION BY user_id`를 사용한다.
 
 **가장 유사한 사용자 1명을 기반으로 미구매 상품 추천하기**
@@ -1003,7 +994,8 @@ SELECT
 FROM unpurchased_candidates
 ORDER BY user_id, rank;
 ```
-![alt text](image-17.png)
+![img](../SQL_Master/image/Week7/image-17.png)
+
 - `neighbor_rank <= 1`을 `<= 5` 등으로 바꾸면 더 많은 유사 사용자를 반영할 수 있다.
 - 이미 열람했지만 구매하지 않은 상품은 추천에 남는다. 이 예시의 제외 기준은 **열람 여부가 아니라 구매 여부**이다.
 - `COALESCE`로 행동 이력이 없는 상품의 구매 수를 0으로 취급한다.
@@ -1011,13 +1003,9 @@ ORDER BY user_id, rank;
 
 자기 결합은 데이터가 늘면 계산량이 커지므로, 대상 기간·최소 행동 수·이웃 수 등을 정해 처리 범위를 관리한다.
 
-<!-- 3-3 / 23-3 실행 결과 화면은 직접 실습한 뒤 첨부 -->
-
 ### 3-4 추천 시스템을 개선할 때의 포인트
 
 추천은 유사도 공식 하나만 바꾸는 작업이 아니다. 데이터 수집부터 최종 정렬까지 어떤 부분을 바꾸었는지 구분해서 개선한다.
-
-**학습 범위:** p.532~534. 개념 중심의 절이다.
 
 **핵심 내용**
 
@@ -1038,8 +1026,6 @@ ORDER BY user_id, rank;
 
 같은 추천 목록이라도 어느 페이지에서 언제 보여주는지에 따라 효과가 달라질 수 있다. 추천 로직과 함께 사용자에게 제안하는 방식을 설계한다.
 
-**학습 범위:** p.534~536. 개념 중심의 절이다.
-
 **핵심 내용**
 
 | 노출 상황 | 추천 방향 | 확인할 점 |
@@ -1054,8 +1040,6 @@ ORDER BY user_id, rank;
 ### 3-6 추천과 관련한 지표
 
 클릭률이나 매출뿐 아니라, 누구에게 얼마나 폭넓고 유용한 추천을 제공하는지도 확인한다.
-
-**학습 범위:** p.536~537. 개념 중심의 절이다.
 
 **핵심 내용**
 
@@ -1086,8 +1070,6 @@ ORDER BY user_id, rank;
 
 재현율과 정확률처럼 여러 지표를 하나로 평가할 때 산술 평균·기하 평균·조화 평균을 사용할 수 있다. 낮은 지표를 얼마나 엄격하게 반영할지에 따라 평균을 선택한다.
 
-**사용 데이터:** `search_evaluation_by_col`, `search_evaluation_by_row` / p.538~546.
-
 **핵심 로직**
 
 | 평균 | 두 값 a, b의 계산식 | 특징 |
@@ -1115,7 +1097,8 @@ WHERE recall > 0
   AND precision > 0
 ORDER BY path;
 ```
-![alt text](image-18.png)
+![img](../SQL_Master/image/Week7/image-18.png)
+
 **지표가 여러 행에 나누어 저장된 경우**
 
 `(path, index)`가 유일하고 `index`가 `recall`, `precision`인 데이터를 사용한다. `LOG`의 입력과 나눗셈의 분모가 양수가 되도록 필터링한 뒤, 두 지표가 모두 있는 경로만 남긴다.
@@ -1134,7 +1117,8 @@ HAVING COUNT(*) = 2
    AND COUNT(DISTINCT "index") = 2
 ORDER BY path;
 ```
-![alt text](image-19.png)
+![img](../SQL_Master/image/Week7/image-19.png)
+
 기하 평균은 `EXP(AVG(LN(value)))`로 계산할 수 있다. 로그를 취하면 곱셈을 덧셈으로 바꿀 수 있어 지표가 3개 이상인 경우에도 같은 형태로 계산한다.
 
 **재현율:정확률 = 3:7의 가중 평균**
@@ -1152,7 +1136,8 @@ WHERE recall > 0
   AND precision > 0
 ORDER BY path;
 ```
-![alt text](image-20.png)
+![img](../SQL_Master/image/Week7/image-20.png)
+
 **행 형태의 지표에 가중치 마스터 연결하기**
 
 ```sql
@@ -1173,16 +1158,13 @@ HAVING COUNT(*) = 2
    AND COUNT(DISTINCT e."index") = 2
 ORDER BY e.path;
 ```
-![alt text](image-21.png)
-가중 산술 평균은 `AVG(weight * value)`가 아니라 가중 합계를 가중치 합계로 나눈다. 여기서는 가중치 합계가 1이므로 컬럼 형태의 식은 나눗셈을 생략했다. Recall·Precision이 0~100이면 평균도 같은 척도이다.
+![img](../SQL_Master/image/Week7/image-21.png)
 
-<!-- 4-1 / 24-1 실행 결과 화면은 직접 실습한 뒤 첨부 -->
+가중 산술 평균은 `AVG(weight * value)`가 아니라 가중 합계를 가중치 합계로 나눈다. 여기서는 가중치 합계가 1이므로 컬럼 형태의 식은 나눗셈을 생략했다. Recall·Precision이 0~100이면 평균도 같은 척도이다.
 
 ### 4-2 값의 범위가 다른 지표를 정규화해서 비교 가능한 상태로 만들기
 
 열람 수가 수십 회이고 구매 수가 0~1회라면, 두 값을 그대로 더할 때 열람 수의 영향이 커질 수 있다. 범위를 맞춘 다음 목적에 맞는 가중치를 적용한다.
-
-**사용 데이터:** `action_counts` / p.546~551.
 
 **핵심 로직**
 
@@ -1208,7 +1190,8 @@ SELECT
 FROM public.action_counts
 ORDER BY user_id, product;
 ```
-![alt text](image-22.png)
+![img](../SQL_Master/image/Week7/image-22.png)
+
 모든 값이 같은 지표는 `NULL`로 나온다. 이 경우 점수에서 제외할지 공통값을 줄지 정책을 정한다. Min-Max 값은 비교 대상의 최솟값·최댓값이 달라지면 바뀌며, 극단값의 영향을 받는다.
 
 **시그모이드로 횟수 압축하기**
@@ -1224,12 +1207,11 @@ SELECT
 FROM public.action_counts
 ORDER BY user_id, product;
 ```
-![alt text](image-23.png)
+![img](../SQL_Master/image/Week7/image-23.png)
+
 `a`가 클수록 작은 입력에서도 1에 빨리 가까워진다. 입력이 0이면 결과가 0이고, 횟수가 커질수록 추가 횟수의 영향이 줄어든다. `a`를 고정하면 다른 행의 최댓값이 변해도 같은 횟수의 변환값은 바뀌지 않는다.
 
 예를 들어 열람 수 10회는 약 0.4621, 49회는 약 0.9852가 된다. 이 값은 **변환한 점수**이며 구매 확률로 해석하지 않는다.
-
-<!-- 4-2 / 24-2 실행 결과 화면은 직접 실습한 뒤 첨부 -->
 
 ### 4-3 각 데이터의 편차값 계산하기
 
@@ -1268,7 +1250,8 @@ SELECT
 FROM standardized_scores
 ORDER BY subject, name;
 ```
-![alt text](image-24.png)
+![img](../SQL_Master/image/Week7/image-24.png)
+
 - `std_value = 0`: 집단 평균과 같다.
 - `std_value = 1`: 평균보다 표준편차 1개만큼 높다.
 - 편차값 50은 평균, 60은 평균보다 표준편차 1개만큼 높은 위치이다.
@@ -1277,13 +1260,9 @@ ORDER BY subject, name;
 
 표준화 자체에 정규분포 가정이 필요한 것은 아니다. 다만 z-score를 특정 백분위나 확률로 해석하려면 분포를 추가로 확인해야 한다. 표준화했다고 데이터가 정규분포로 바뀌지는 않는다.
 
-<!-- 4-3 / 24-3 실행 결과 화면은 직접 실습한 뒤 첨부 -->
-
 ### 4-4 거대한 숫자 지표를 직감적으로 이해하기 쉽게 가공하기
 
 오래된 행동은 최근 행동보다 관심도를 덜 반영할 수 있다. 날짜 차이에 로그를 적용해 가중치가 급격히 줄지 않도록 조절하고, 열람·구매 점수에 반영한다.
-
-**사용 데이터:** `action_counts_with_date` / p.556~562.
 
 **핵심 로직**
 
@@ -1321,7 +1300,9 @@ SELECT
 FROM action_counts_with_weight
 ORDER BY user_id, product, dt::date;
 ```
-![alt text](image-25.png)
+
+![img](../SQL_Master/image/Week7/image-25.png)
+
 **날짜 가중치를 반영한 상품 점수**
 
 ```sql
@@ -1348,12 +1329,12 @@ FROM action_counts_with_weight
 GROUP BY user_id, product
 ORDER BY user_id, product;
 ```
-![alt text](image-26.png)
+
+![img](../SQL_Master/image/Week7/image-26.png)
+
 매개변수 `0.1`을 크게 하면 오래된 행동의 가중치가 더 빨리 감소한다. 0으로 두면 모든 가중치가 1이 된다.
 
 이 쿼리의 기준일은 **각 사용자의 마지막 행동일**이다. 현재 날짜 기준으로 휴면 기간을 평가하는 점수와는 다르다. 예측 실험에서는 평가 시점 이후 행동이 기준일 계산에 들어가지 않도록 관측 기간을 먼저 제한한다.
-
-<!-- 4-4 / 24-4 실행 결과 화면은 직접 실습한 뒤 첨부 -->
 
 ### 4-5 독자적인 점수 계산 방법을 정의해서 순위 작성하기
 
@@ -1411,12 +1392,12 @@ SELECT
 FROM item_scores
 ORDER BY rank;
 ```
-![alt text](image-27.png)
+
+![img](../SQL_Master/image/Week7/image-27.png)
+
 최종 점수뿐 아니라 원래 매출과 정규화 점수를 함께 출력해, 어떤 요소 때문에 순위가 높아졌는지 확인한다. 같은 점수에서는 `item`으로 정렬해 결과 순서를 일정하게 했다. 같은 점수에 같은 등수를 주려면 `RANK() OVER (ORDER BY score DESC NULLS LAST)`를 사용한다.
 
 분기 내 모든 상품 매출이 같으면 해당 정규화 점수는 `NULL`이다. 이 경우 가중치를 어떻게 처리할지 정한 뒤 실제 운영에 적용한다. 가중치 7:3은 예시이며, 과거 기간으로 계산한 순위가 이후 기간에도 유용한지는 별도로 평가한다.
-
-<!-- 4-5 / 24-5 실행 결과 화면은 직접 실습한 뒤 첨부 -->
 
 
 한 학기 동안 다소 부족한 커리큘럼이었음에도 불구하고 성실하게, 그리고 열심히 과제를 수행해주셔서 진심으로 감사드립니다.
